@@ -20,9 +20,9 @@ Route::prefix('about')->group(function () {
     });
 });
 
-// Program
-Route::get('/program/{nama_program?}', function ($nama_program = 'Semua Program') {
-    return "<h1>Halaman Program</h1><p>Menampilkan detail untuk program: <strong>$nama_program</strong></p>"
+// {Product}
+Route::get('/product/{name_product?}', function ($name_product = 'Semua Produk') {
+    return "<h1>Halaman Produk</h1><p>Menampilkan detail untuk produk: <strong>$name_product</strong></p>"
     . "<p>Lorem ipsum dolor sitam et, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. </p>
     <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse quam nihil molestiae consequatur, vel illum qui dolorem eum fugiat quo voluptas nulla pariatur? At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga.</p>";
 });
@@ -39,4 +39,28 @@ Route::redirect('/team', '/about/team');
 // Fallback 
 Route::fallback(function () {
     return '<h1>404 - Halaman Tidak Ditemukan</h1><p>Maaf, alamat URL yang kamu tuju tidak ada.</p>';
+});
+
+//-----------------------------------//
+//-----------------------------------//
+
+// Home
+Route::get('/', function () {
+    return view ('welcome');
+});
+
+Route::get('/about', function () {
+    return view ('about');
+});
+
+Route::get('/contact-us', function () {
+    return view ('contact-us');
+});
+
+Route::get('/product', function () {
+    return view ('product');
+});
+
+Route::get('/team', function () {
+    return view ('team');
 });
