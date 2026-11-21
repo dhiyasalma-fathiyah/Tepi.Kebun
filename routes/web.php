@@ -1,5 +1,9 @@
 <?php
- 
+
+use App\Http\Controllers\ContactController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\TeamMemberController;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
  
@@ -45,7 +49,7 @@ Route::get('/contact-us', function () {
  
 Route::post('/contact-us', function (Request $request) {
     $request->validate([
-        'name'    => 'required|string|max:100',
+        'name'    => 'required|string|max:100', 
         'email'   => 'required|email',
         'message' => 'required|string|max:2000',
     ]);
@@ -55,3 +59,16 @@ Route::post('/contact-us', function (Request $request) {
     return redirect()->route('contact')
         ->with('success', 'Terima kasih! Pesan Anda sudah kami terima.');
 })->name('contact.send');
+
+// Route Eloquent & Soft Delete (Week 08)
+Route::resource('products', ProductController::class);
+Route::get('products-trashed', [ProductController::class, 'trashed'])->name('products.trashed');
+Route::post('products/{id}/restore', [ProductController::class, 'restore'])->name('products.restore');
+
+Route::resource('contacts', ContactController::class);
+Route::get('contacts-trashed', [ContactController::class, 'trashed'])->name('contacts.trashed');
+Route::post('contacts/{id}/restore', [ContactController::class, 'restore'])->name('contacts.restore');
+
+Route::resource('team-members', TeamMemberController::class);
+Route::get('team-members-trashed', [TeamMemberController::class, 'trashed'])->name('team-members.trashed');
+Route::post('team-members/{id}/restore', [TeamMemberController::class, 'restore'])->name('team-members.restore');
