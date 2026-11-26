@@ -2,79 +2,100 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ProductRequest;
 use App\Models\Product;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
+use Illuminate\View\View;
 
 class ProductController extends Controller
 {
-    public function index()
+    public function index(Request $request): View
     {
-        $products = Product::all();
-        return view('product', compact('products'));
+        $products = Product::query()
+            ->search($request->query('q'))
+            ->grade($request->query('grade'))
+            ->latest()
+            ->get();
+
+        return view('products.index', [
+            'products'  => $products,
+            'stats'     => $this->summarize($products),
+            'isTrashed' => false,
+        ]);
     }
 
-    public function store(Request $request)
+    public function create(): View
     {
-        $validated = $request->validate([
-            'product_name' => 'required|string|max:100',
-            'category' => 'required|string|max:50',
-            'grade' => 'required|in:A,B',
-            'ripeness_percentage' => 'required|integer|min:0|max:100',
-            'weight_per_box' => 'required|numeric|min:0',
-            'price_per_box' => 'required|numeric|min:0',
-            'stock' => 'required|integer|min:0',
-            'description' => 'nullable|string',
-            'image' => 'nullable|string|max:255',
-        ]);
-
-        Product::create($validated);
-
-        return redirect()->back()->with('success', 'Produk berhasil ditambahkan.');
+        return view('products.create', ['product' => new Product()]);
     }
 
-    public function update(Request $request, $id)
+    public function store(ProductRequest $request): RedirectResponse
     {
-        $validated = $request->validate([
-            'product_name' => 'sometimes|required|string|max:100',
-            'category' => 'sometimes|required|string|max:50',
-            'grade' => 'sometimes|required|in:A,B',
-            'ripeness_percentage' => 'sometimes|required|integer|min:0|max:100',
-            'weight_per_box' => 'sometimes|required|numeric|min:0',
-            'price_per_box' => 'sometimes|required|numeric|min:0',
-            'stock' => 'sometimes|required|integer|min:0',
-            'description' => 'nullable|string',
-            'image' => 'nullable|string|max:255',
-        ]);
+        Product::create($request->validated());
 
-        $product = Product::findOrFail($id);
-        $product->update($validated);
+        return redirect()->route('products.index')
+            ->with('success', 'Produk berhasil ditambahkan.');
+    }
 
-        return redirect()->back()->with('success', 'Produk berhasil diperbarui.');
+    public function show(Product $product): View
+    {
+        $product->loadCount('contacts');
+
+        return view('products.show', compact('product'));
+    }
+
+    public function edit(Product $product): View
+    {
+        return view('products.edit', compact('product'));
+    }
+
+    public function update(ProductRequest $request, Product $product): RedirectResponse
+    {
+        $product->update($request->validated());
+
+        return redirect()->route('products.show', $product)
+            ->with('success', 'Produk berhasil diperbarui.');
     }
 
     // Soft delete: mengisi kolom deleted_at tanpa menghapus permanen
-    public function destroy($id)
+    public function destroy(Product $product): RedirectResponse
     {
-        $product = Product::findOrFail($id);
         $product->delete();
 
-        return redirect()->back()->with('success', 'Produk berhasil dihapus sementara.');
+        return redirect()->route('products.index')
+            ->with('success', 'Produk dipindahkan ke sampah.');
     }
 
-    public function trashed()
+    public function trashed(): View
     {
-        $trashedProducts = Product::onlyTrashed()->get();
-        return view('product', [
-            'products' => $trashedProducts,
+        $products = Product::onlyTrashed()->latest('deleted_at')->get();
+
+        return view('products.index', [
+            'products'  => $products,
+            'stats'     => $this->summarize($products),
             'isTrashed' => true,
         ]);
     }
 
-    public function restore($id)
+    public function restore(int $id): RedirectResponse
     {
-        $product = Product::withTrashed()->findOrFail($id);
-        $product->restore();
+        Product::onlyTrashed()->findOrFail($id)->restore();
 
-        return redirect()->back()->with('success', 'Produk berhasil dipulihkan.');
+        return redirect()->route('products.index')
+            ->with('success', 'Produk berhasil dipulihkan.');
+    }
+
+    /** Ringkasan statistik memakai Laravel Collection. */
+    private function summarize(Collection $products): Collection
+    {
+        return collect([
+            'total'     => $products->count(),
+            'stock'     => $products->sum('stock'),
+            'avg_price' => (float) $products->avg('price_per_box'),
+            'by_grade'  => $products->countBy('grade'),
+            'category'  => $products->pluck('category')->unique()->sort()->values(),
+        ]);
     }
 }

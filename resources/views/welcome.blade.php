@@ -10,7 +10,7 @@
         Pasokan buah berkualitas untuk supermarket, restoran, hotel, dan mitra B2B lainnya
         dengan rantai pasok efisien dan harga kompetitif.
     </p>
-    <a href="{{ route('product') }}" class="btn tk-btn-orange btn-lg me-2">Lihat Produk</a>
+    <a href="{{ route('products.index') }}" class="btn tk-btn-orange btn-lg me-2">Lihat Produk</a>
     <a href="{{ route('contact') }}" class="btn btn-light btn-lg rounded-pill fw-bold">Hubungi Kami</a>
 </section>
  
@@ -62,7 +62,7 @@
         </div>
     </div>
     <div class="text-center mt-4">
-        <a href="{{ route('product') }}" class="btn tk-btn-outline px-4">Semua Produk</a>
+        <a href="{{ route('products.index') }}" class="btn tk-btn-outline px-4">Semua Produk</a>
     </div>
 </section>
 @endsection

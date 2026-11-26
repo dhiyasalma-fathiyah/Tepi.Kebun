@@ -2,68 +2,79 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\ContactRequest;
 use App\Models\Contact;
+use App\Models\Product;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class ContactController extends Controller
 {
-    public function index()
+    // Form publik "Hubungi Kami" (GET /contact-us)
+    public function create(Request $request): View
     {
-        $contacts = Contact::all();
-        return view('contact-us', compact('contacts'));
+        return view('contacts.create', [
+            'products'         => Product::orderBy('product_name')->pluck('product_name', 'id'),
+            'selectedProduct'  => $request->query('product_id'),
+        ]);
     }
 
-    public function store(Request $request)
+    // Daftar pesan masuk (Read)
+    public function index(): View
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:100',
-            'email' => 'required|email',
-            'message' => 'required|string|max:2000',
+        return view('contacts.index', [
+            'contacts'  => Contact::with('product')->latest()->get(),
+            'isTrashed' => false,
         ]);
+    }
 
-        Contact::create($validated);
+    public function store(ContactRequest $request): RedirectResponse
+    {
+        Contact::create($request->validated());
 
         return redirect()->route('contact')
             ->with('success', 'Terima kasih! Pesan Anda sudah kami terima.');
     }
 
-    public function update(Request $request, $id)
+    public function edit(Contact $contact): View
     {
-        $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:100',
-            'email' => 'sometimes|required|email',
-            'message' => 'sometimes|required|string|max:2000',
+        return view('contacts.edit', [
+            'contact'  => $contact,
+            'products' => Product::orderBy('product_name')->pluck('product_name', 'id'),
         ]);
-
-        $contact = Contact::findOrFail($id);
-        $contact->update($validated);
-
-        return redirect()->back()->with('success', 'Pesan kontak berhasil diperbarui.');
     }
 
-    // Soft delete: mengisi kolom deleted_at tanpa menghapus permanen
-    public function destroy($id)
+    public function update(ContactRequest $request, Contact $contact): RedirectResponse
     {
-        $contact = Contact::findOrFail($id);
+        $contact->update($request->validated());
+
+        return redirect()->route('contacts.index')
+            ->with('success', 'Pesan kontak berhasil diperbarui.');
+    }
+
+    // Soft delete
+    public function destroy(Contact $contact): RedirectResponse
+    {
         $contact->delete();
 
-        return redirect()->back()->with('success', 'Pesan kontak berhasil dihapus sementara.');
+        return redirect()->route('contacts.index')
+            ->with('success', 'Pesan dipindahkan ke sampah.');
     }
 
-    public function trashed()
+    public function trashed(): View
     {
-        $trashedContacts = Contact::onlyTrashed()->get();
-        return view('contact-us', [
-            'contacts' => $trashedContacts,
+        return view('contacts.index', [
+            'contacts'  => Contact::onlyTrashed()->with('product')->latest('deleted_at')->get(),
             'isTrashed' => true,
         ]);
     }
 
-    public function restore($id)
+    public function restore(int $id): RedirectResponse
     {
-        $contact = Contact::withTrashed()->findOrFail($id);
-        $contact->restore();
+        Contact::onlyTrashed()->findOrFail($id)->restore();
 
-        return redirect()->back()->with('success', 'Pesan kontak berhasil dipulihkan.');
+        return redirect()->route('contacts.index')
+            ->with('success', 'Pesan berhasil dipulihkan.');
     }
 }

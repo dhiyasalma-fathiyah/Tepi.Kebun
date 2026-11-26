@@ -2,69 +2,69 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\TeamMemberRequest;
 use App\Models\TeamMember;
-use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\View\View;
 
 class TeamMemberController extends Controller
 {
-    public function index()
+    public function index(): View
     {
-        $teamMembers = TeamMember::all();
-        return view('team', compact('teamMembers'));
-    }
-
-    public function store(Request $request)
-    {
-        $validated = $request->validate([
-            'name' => 'required|string|max:100',
-            'role' => 'required|string|max:100',
-            'bio' => 'nullable|string|max:1000',
-            'photo' => 'nullable|string|max:255',
-        ]);
-
-        TeamMember::create($validated);
-
-        return redirect()->back()->with('success', 'Anggota tim berhasil ditambahkan.');
-    }
-
-    public function update(Request $request, $id)
-    {
-        $validated = $request->validate([
-            'name' => 'sometimes|required|string|max:100',
-            'role' => 'sometimes|required|string|max:100',
-            'bio' => 'nullable|string|max:1000',
-            'photo' => 'nullable|string|max:255',
-        ]);
-
-        $member = TeamMember::findOrFail($id);
-        $member->update($validated);
-
-        return redirect()->back()->with('success', 'Data anggota tim berhasil diperbarui.');
-    }
-
-    // Soft delete: mengisi kolom deleted_at tanpa menghapus permanen
-    public function destroy($id)
-    {
-        $member = TeamMember::findOrFail($id);
-        $member->delete();
-
-        return redirect()->back()->with('success', 'Anggota tim berhasil dihapus sementara.');
-    }
-
-    public function trashed()
-    {
-        $trashedMembers = TeamMember::onlyTrashed()->get();
-        return view('team', [
-            'teamMembers' => $trashedMembers,
-            'isTrashed' => true,
+        return view('team-members.index', [
+            'teamMembers' => TeamMember::orderBy('name')->get(),
+            'isTrashed'   => false,
         ]);
     }
 
-    public function restore($id)
+    public function create(): View
     {
-        $member = TeamMember::withTrashed()->findOrFail($id);
-        $member->restore();
+        return view('team-members.create', ['teamMember' => new TeamMember()]);
+    }
 
-        return redirect()->back()->with('success', 'Anggota tim berhasil dipulihkan.');
+    public function store(TeamMemberRequest $request): RedirectResponse
+    {
+        TeamMember::create($request->validated());
+
+        return redirect()->route('team-members.index')
+            ->with('success', 'Anggota tim berhasil ditambahkan.');
+    }
+
+    public function edit(TeamMember $teamMember): View
+    {
+        return view('team-members.edit', compact('teamMember'));
+    }
+
+    public function update(TeamMemberRequest $request, TeamMember $teamMember): RedirectResponse
+    {
+        $teamMember->update($request->validated());
+
+        return redirect()->route('team-members.index')
+            ->with('success', 'Data anggota tim berhasil diperbarui.');
+    }
+
+    // Soft delete
+    public function destroy(TeamMember $teamMember): RedirectResponse
+    {
+        $teamMember->delete();
+
+        return redirect()->route('team-members.index')
+            ->with('success', 'Anggota tim dipindahkan ke sampah.');
+    }
+
+    public function trashed(): View
+    {
+        return view('team-members.index', [
+            'teamMembers' => TeamMember::onlyTrashed()->latest('deleted_at')->get(),
+            'isTrashed'   => true,
+        ]);
+    }
+
+    public function restore(int $id): RedirectResponse
+    {
+        TeamMember::onlyTrashed()->findOrFail($id)->restore();
+
+        return redirect()->route('team-members.index')
+            ->with('success', 'Anggota tim berhasil dipulihkan.');
     }
 }

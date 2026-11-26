@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -10,8 +11,6 @@ class TeamMember extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $table = 'team_members';
-
     protected $fillable = [
         'name',
         'role',
@@ -19,10 +18,9 @@ class TeamMember extends Model
         'photo',
     ];
 
-    protected function casts(): array
+    /** Accessor: huruf awal nama untuk avatar. */
+    protected function initial(): Attribute
     {
-        return [
-            'deleted_at' => 'datetime',
-        ];
+        return Attribute::get(fn () => strtoupper(mb_substr($this->name, 0, 1)));
     }
 }

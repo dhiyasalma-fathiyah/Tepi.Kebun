@@ -24,8 +24,9 @@
             <ul class="navbar-nav ms-auto gap-lg-1">
                 <li class="nav-item"><a class="nav-link {{ request()->routeIs('home') ? 'active' : '' }}" href="{{ route('home') }}">Beranda</a></li>
                 <li class="nav-item"><a class="nav-link {{ request()->routeIs('about') ? 'active' : '' }}" href="{{ route('about') }}">Tentang</a></li>
-                <li class="nav-item"><a class="nav-link {{ request()->routeIs('product') ? 'active' : '' }}" href="{{ route('product') }}">Produk</a></li>
-                <li class="nav-item"><a class="nav-link {{ request()->routeIs('team') ? 'active' : '' }}" href="{{ route('team') }}">Tim</a></li>
+                <li class="nav-item"><a class="nav-link {{ request()->routeIs('products.*') ? 'active' : '' }}" href="{{ route('products.index') }}">Produk</a></li>
+                <li class="nav-item"><a class="nav-link {{ request()->routeIs('team-members.*') ? 'active' : '' }}" href="{{ route('team-members.index') }}">Tim</a></li>
+                <li class="nav-item"><a class="nav-link {{ request()->routeIs('contacts.*') ? 'active' : '' }}" href="{{ route('contacts.index') }}">Pesan Masuk</a></li>
                 <li class="nav-item"><a class="btn tk-btn-orange ms-lg-2" href="{{ route('contact') }}">Hubungi Kami</a></li>
             </ul>
         </div>
@@ -34,6 +35,7 @@
  
 <main class="py-5">
     <div class="container">
+        @include('partials.flash')
         @yield('content')
     </div>
 </main>
