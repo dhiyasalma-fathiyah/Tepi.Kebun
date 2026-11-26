@@ -1,74 +1,70 @@
 <?php
 
+use App\Http\Controllers\Admin;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CatalogController;
 use App\Http\Controllers\ContactController;
-use App\Http\Controllers\ProductController;
-use App\Http\Controllers\TeamMemberController;
-
-use Illuminate\Http\Request;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\OrderController;
+use App\Http\Controllers\PageController;
 use Illuminate\Support\Facades\Route;
- 
-// Home: /
-Route::get('/', function () {
-    return view('welcome');
-})->name('home');
- 
-// About: /about
-Route::get('/about', function () {
-    return view('about');
-})->name('about');
- 
-// Team: /team
-Route::get('/team', function () {
-    return view('team');
-})->name('team');
- 
-// Product: /product  atau  /product/pisang-cavendish
-Route::get('/product/{slug?}', function ($slug = null) {
-    $products = [
-        ['slug' => 'pisang-cavendish', 'name' => 'Pisang Cavendish', 'grade' => 'A', 'color' => 'banana',
-         'desc' => 'Pisang kualitas superior, manis, dengan warna kuning cerah merata.'],
-        ['slug' => 'jeruk-siam', 'name' => 'Jeruk Siam', 'grade' => 'A', 'color' => 'orange',
-         'desc' => 'Jeruk dengan kandungan air melimpah dan rasa manis segar alami.'],
-        ['slug' => 'mangga-harum-manis', 'name' => 'Mangga Harum Manis', 'grade' => 'B', 'color' => 'mango',
-         'desc' => 'Mangga manis aromatis, cocok untuk konsumsi langsung maupun olahan.'],
-    ];
- 
-    $selected = collect($products)->firstWhere('slug', $slug);
- 
-    return view('product', [
-        'products' => $products,
-        'selected' => $selected,
-        'slug'     => $slug,
-    ]);
-})->name('product');
- 
-// Contact Us: /contact-us
-Route::get('/contact-us', function () {
-    return view('contact-us');
-})->name('contact');
- 
-Route::post('/contact-us', function (Request $request) {
-    $request->validate([
-        'name'    => 'required|string|max:100', 
-        'email'   => 'required|email',
-        'message' => 'required|string|max:2000',
-    ]);
- 
-    // TODO: simpan ke database / kirim email di sini
- 
-    return redirect()->route('contact')
-        ->with('success', 'Terima kasih! Pesan Anda sudah kami terima.');
-})->name('contact.send');
 
-// Route Eloquent & Soft Delete (Week 08)
-Route::resource('products', ProductController::class);
-Route::get('products-trashed', [ProductController::class, 'trashed'])->name('products.trashed');
-Route::post('products/{id}/restore', [ProductController::class, 'restore'])->name('products.restore');
+/*
+|--------------------------------------------------------------------------
+| Halaman publik
+|--------------------------------------------------------------------------
+*/
+Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/about', [PageController::class, 'about'])->name('about');
+Route::get('/team', [PageController::class, 'team'])->name('team');
 
-Route::resource('contacts', ContactController::class);
-Route::get('contacts-trashed', [ContactController::class, 'trashed'])->name('contacts.trashed');
-Route::post('contacts/{id}/restore', [ContactController::class, 'restore'])->name('contacts.restore');
+Route::get('/produk', [CatalogController::class, 'index'])->name('products.index');
+Route::get('/produk/{product:slug}', [CatalogController::class, 'show'])->name('products.show');
 
-Route::resource('team-members', TeamMemberController::class);
-Route::get('team-members-trashed', [TeamMemberController::class, 'trashed'])->name('team-members.trashed');
-Route::post('team-members/{id}/restore', [TeamMemberController::class, 'restore'])->name('team-members.restore');
+// Form Pemesanan (terpisah dari Hubungi Kami)
+Route::get('/pesan', [OrderController::class, 'create'])->name('orders.create');
+Route::post('/pesan', [OrderController::class, 'store'])->name('orders.store');
+Route::get('/pesanan/{order}', [OrderController::class, 'show'])->name('orders.show');
+
+// Form Hubungi Kami + FAQ
+Route::get('/contact-us', [ContactController::class, 'index'])->name('contact');
+Route::post('/contact-us', [ContactController::class, 'store'])->name('contact.send');
+
+/*
+|--------------------------------------------------------------------------
+| Autentikasi admin
+|--------------------------------------------------------------------------
+*/
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [AuthController::class, 'login'])->name('login.attempt');
+});
+Route::post('/logout', [AuthController::class, 'logout'])->middleware('auth')->name('logout');
+
+/*
+|--------------------------------------------------------------------------
+| Area admin — dilindungi route middleware `auth` + `is_admin`
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth', 'is_admin'])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::get('/', [Admin\DashboardController::class, 'index'])->name('dashboard');
+
+        Route::resource('products', Admin\ProductController::class)->except('show');
+        Route::post('products/{id}/restore', [Admin\ProductController::class, 'restore'])->name('products.restore');
+
+        Route::resource('categories', Admin\CategoryController::class)->except(['show', 'create']);
+
+        Route::resource('orders', Admin\OrderController::class)->only(['index', 'show', 'update', 'destroy']);
+        Route::post('orders/{id}/restore', [Admin\OrderController::class, 'restore'])->name('orders.restore');
+
+        Route::resource('contacts', Admin\ContactMessageController::class)
+            ->parameters(['contacts' => 'contact'])
+            ->only(['index', 'show', 'update', 'destroy']);
+        Route::post('contacts/{id}/restore', [Admin\ContactMessageController::class, 'restore'])->name('contacts.restore');
+
+        Route::resource('team', Admin\TeamMemberController::class)->except('show');
+        Route::post('team/{id}/restore', [Admin\TeamMemberController::class, 'restore'])->name('team.restore');
+    });

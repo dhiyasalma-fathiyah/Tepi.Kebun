@@ -12,7 +12,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        // Alias route middleware untuk membatasi halaman admin.
+        $middleware->alias([
+            'is_admin' => \App\Http\Middleware\EnsureUserIsAdmin::class,
+        ]);
+
+        // Admin yang sudah login diarahkan ke dashboard saat membuka halaman login.
+        $middleware->redirectUsersTo(fn () => route('admin.dashboard'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

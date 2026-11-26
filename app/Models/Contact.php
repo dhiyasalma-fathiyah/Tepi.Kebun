@@ -10,18 +10,19 @@ class Contact extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $table = 'contacts';
-
     protected $fillable = [
         'name',
         'email',
+        'phone',
+        'subject',
         'message',
+        'is_read',
     ];
 
     protected function casts(): array
     {
         return [
-            'deleted_at' => 'datetime',
+            'is_read' => 'boolean',
         ];
     }
 }

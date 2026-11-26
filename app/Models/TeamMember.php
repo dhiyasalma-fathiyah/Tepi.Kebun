@@ -5,12 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Storage;
 
 class TeamMember extends Model
 {
     use HasFactory, SoftDeletes;
-
-    protected $table = 'team_members';
 
     protected $fillable = [
         'name',
@@ -19,10 +18,8 @@ class TeamMember extends Model
         'photo',
     ];
 
-    protected function casts(): array
+    public function getPhotoUrlAttribute(): ?string
     {
-        return [
-            'deleted_at' => 'datetime',
-        ];
+        return $this->photo ? Storage::disk('public')->url($this->photo) : null;
     }
 }

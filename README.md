@@ -1,58 +1,72 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Tepi Kebun — Web Framework Assessment II
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Aplikasi Laravel untuk pasokan buah segar B2B: katalog buah + foto, **form pemesanan** (gaya marketplace),
+**form hubungi kami** (FAQ, email, WhatsApp), dan **dashboard admin** yang dilindungi route middleware.
 
-## About Laravel
+## Pemetaan komponen Assessment II
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+| Komponen | Lokasi |
+|---|---|
+| Migration | `database/migrations/*` (categories, products, orders, order_items, contacts, team_members, users.is_admin) |
+| Eloquent ORM + relasi | `app/Models/*` — `Category hasMany Product`, `Order hasMany OrderItem`, `OrderItem belongsTo Product`, SoftDeletes |
+| Controller | `app/Http/Controllers/*` (publik) dan `app/Http/Controllers/Admin/*` |
+| Collection | `CatalogController` (filter/countBy), `OrderController` (map/sum/keyBy), `Admin\DashboardController` (groupBy/sum/pluck/sortDesc/take), `ContactController` (groupBy FAQ) |
+| Form processing & validation | `app/Http/Requests/*` (+ validasi stok, upload foto jpg/png/webp maks 2 MB) |
+| CRUD + soft delete | Admin: Buah, Kategori, Pesanan, Pesan Masuk, Tim (tab "Terhapus" + tombol Pulihkan) |
+| Route middleware | `routes/web.php` grup `/admin` → `auth` + `is_admin` (`app/Http/Middleware/EnsureUserIsAdmin.php`, alias di `bootstrap/app.php`) |
+| Mail | `app/Mail/ContactMessageMail.php` + `resources/views/emails/contact-message.blade.php` |
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
-
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
-
-## Learning Laravel
-
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+## Setup lokal
 
 ```bash
-composer require laravel/boost --dev
-
-php artisan boost:install
+composer install
+cp .env.example .env
+php artisan key:generate
+touch database/database.sqlite        # DB default: SQLite (atau ubah DB_* di .env ke MySQL)
+php artisan migrate:fresh --seed      # migrasi + data 14 buah, 5 kategori, admin, pesanan contoh
+php artisan storage:link              # agar foto di storage/app/public bisa diakses
+php artisan serve                     # http://localhost:8000
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+> Gunakan `migrate:fresh` (bukan `migrate`) karena migrasi `products`, `contacts`, dan `team_members` diperbarui.
+> Pastikan `APP_URL` di `.env` sama dengan alamat `php artisan serve` agar URL foto benar.
 
-## Contributing
+### Akun admin (seeder)
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+| | |
+|---|---|
+| Login | `http://localhost:8000/login` |
+| Email | `admin@tepikebun.test` (`ADMIN_EMAIL`) |
+| Password | `password123` (`ADMIN_PASSWORD`) — **ganti sebelum produksi** |
+| Non-admin (uji 403) | `user@tepikebun.test` / `password123` |
 
-## Code of Conduct
+### Konfigurasi `.env`
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```dotenv
+ADMIN_EMAIL=admin@tepikebun.test      # penerima email dari form Hubungi Kami
+WHATSAPP_NUMBER=6281234567890         # format internasional tanpa +
+BANK_NAME=BCA
+BANK_ACCOUNT="1234 5678 90"
+BANK_HOLDER="Tepi Kebun"
 
-## Security Vulnerabilities
+# Email — default MAIL_MAILER=log (isi email ditulis ke storage/logs/laravel.log).
+# Untuk SMTP sungguhan (contoh Mailtrap/Gmail):
+# MAIL_MAILER=smtp
+# MAIL_HOST=sandbox.smtp.mailtrap.io
+# MAIL_PORT=2525
+# MAIL_USERNAME=...
+# MAIL_PASSWORD=...
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Bila SMTP gagal, pesan tetap tersimpan di database, error dicatat di log, dan pengunjung melihat pemberitahuan — aplikasi tidak crash.
 
-## License
+### Foto buah
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Seeder menyalin 14 ilustrasi contoh ke `storage/app/public/products`. Ganti dengan foto asli lewat
+**Admin → Data Buah → Edit → Foto** (JPG/PNG/WEBP, maks 2 MB). Produk tanpa foto menampilkan ikon kategori.
+
+### Test
+
+```bash
+php artisan test
+```
